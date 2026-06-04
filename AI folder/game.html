@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Game Tránh Vật Cản</title>
+    <style>
+        body { margin: 0; background: #111; color: #fff; font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        canvas { background: #222; display: block; }
+        #gameOver { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; display: none; }
+        #gameOver button { padding: 10px 20px; font-size: 18px; background: #4CAF50; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+        #gameOver button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOver">
+        <h2>Game Over</h2>
+        <p>Điểm số: <span id="finalScore">0</span></p>
+        <button id="restartBtn">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameOverDiv = document.getElementById('gameOver');
+        const finalScoreSpan = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const player = { x: 50, y: canvas.height / 2, radius: 20, color: '#00f', speed: 5 };
+        const obstacles = [];
+        const obstacleWidth = 30;
+        const obstacleHeight = 50;
+        let obstacleSpeed = 3;
+        let obstacleTimer = 0;
+        const obstacleInterval = 90;
+
+        let score = 0;
+        let gameOver = false;
+
+        const keys = {};
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+
+        function gameLoop() {
+            if (gameOver) return;
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            if (keys['ArrowUp'] && player.y - player.radius > 0) player.y -= player.speed;
+            if (keys['ArrowDown'] && player.y + player.radius < canvas.height) player.y += player.speed;
+
+            obstacleTimer++;
+            if (obstacleTimer >= obstacleInterval) {
+                obstacleTimer = 0;
+                const y = Math.random() * (canvas.height - obstacleHeight);
+                obstacles.push({ x: canvas.width, y, width: obstacleWidth, height: obstacleHeight, color: '#f00' });
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.x -= obstacleSpeed;
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    score++;
+                }
+                if (
+                    player.x < obs.x + obs.width &&
+                    player.x + player.radius > obs.x &&
+                    player.y < obs.y + obs.height &&
+                    player.y + player.radius > obs.y
+                ) {
+                    gameOver = true;
+                    gameOverDiv.style.display = 'flex';
+                    finalScoreSpan.textContent = score;
+                }
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+
+            for (const obs of obstacles) {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, canvas.width - 150, 30);
+        }
+
+        restartBtn.addEventListener('click', () => {
+            obstacles.length = 0;
+            score = 0;
+            gameOver = false;
+            player.y = canvas.height / 2;
+            gameOverDiv.style.display = 'none';
+            gameLoop();
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
